@@ -2,11 +2,11 @@ FROM python:3.9-alpine3.13
 LABEL maintainer='Yusuke'
 
 ENV PYTHONUNBUFFERED 1
-WORKDIR /app
 
 COPY ./requirements.txt /tmp/requirements.txt
 COPY ./requirements.dev.txt /tmp/requirements.dev.txt
 COPY ./app .
+WORKDIR /app
 EXPOSE 8000
 
 ARG DEV=false
