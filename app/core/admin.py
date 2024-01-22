@@ -38,3 +38,6 @@ class UserAdmin(BaseUserAdmin):
 
 
 admin.site.register(models.User, UserAdmin)
+# Userモデルをカスタマイズするために、UserAdminと関連付けて登録する。
+admin.site.register(models.Recipe)
+# カスタマイズする必要がない場合は、通常通りこの形。
