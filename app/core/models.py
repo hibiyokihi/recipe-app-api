@@ -56,7 +56,7 @@ class Recipe(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         # 第一引数は参照するモデル。settings.pyで'core.User'を指定している。
-        # get_user_model()と同様、User参照先に変更があった場合にもコードに影響が出ない。
+        # この方法によれば、get_user_model()と同様、User参照先に変更があった場合にもコードに影響が出ない。
         on_delete=models.CASCADE,
         # 参照先のUserインスタンスが削除された場合には、関連するRecipeインスタンスも削除する
     )
@@ -65,6 +65,20 @@ class Recipe(models.Model):
     time_minutes = models.IntegerField()
     price = models.DecimalField(max_digits=5, decimal_places=2)
     link = models.CharField(max_length=255, blank=True)
+    tags = models.ManyToManyField('Tag')
+    # 一つのRecipeが複数のTagを持つこともあるし、一つのTagが複数のRecipeに使われることもある。
 
     def __str__(self):
         return self.title
+
+
+class Tag(models.Model):
+    """Tag for filtering recipes."""
+    name = models.CharField(max_length=255)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+
+    def __str__(self):
+        return self.name

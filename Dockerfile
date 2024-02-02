@@ -11,15 +11,17 @@ EXPOSE 8000
 
 ARG DEV=false
 RUN python -m venv /py && \
+# コンテナを作成する際に/pyディレクトリに仮想環境を構築する。
     /py/bin/pip install --upgrade pip && \
     apk add --update --no-cache postgresql-client && \
     apk add --update --no-cache --virtual .tmp-build-deps \
-        build-base postgresql-dev musl-dev && \       
+        build-base postgresql-dev musl-dev && \
     /py/bin/pip install -r /tmp/requirements.txt && \
     if [ $DEV = "true" ] ; \
         then echo "--DEV BUILD--" && /py/bin/pip install -r /tmp/requirements.dev.txt ; \
     fi && \
     rm -rf /tmp && \
+    # imageはできる限り軽くしておいた方がいい。コンテナ立ち上げ時だけに使用するものは、用途が済んだらremoveする。
     apk del .tmp-build-deps && \
     adduser \
         --disabled-password \
