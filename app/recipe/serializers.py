@@ -34,17 +34,22 @@ class RecipeSerializer(serializers.ModelSerializer):
     # Recipeモデルのデータを渡すとserializerをリターンし、serializer.dataでvalidate後のデータを得る。
     # list以外のcreateやupdateアクションの場合はDetailの方が対応するが、Detailはこのserializerを継承してるからここを上書き。
     tags = TagSerializer(many=True, required=False)
+    ingredients = IngredientSerializer(many=True, required=False)
+    # Recipeモデルのtagsとingredientsフィールドはそれぞれのserializerが対応する
 
     class Meta:
         model = Recipe
-        fields = ['id', 'title', 'time_minutes', "price", "link", "tags"]
+        fields = ['id', 'title', 'time_minutes', "price", "link", "tags", "ingredients"]
         read_only_fields = ['id']
 
     def _get_or_create_tags(self, tags, recipe):
         """Handle getting or creating tags as needed."""
-        # createとupdateに共通するコードをまとめるためのヘルパーFn。外で使うことを想定しないため、_を頭につける。
+        # tagsを除いたrecipeとPOSTに含まれるtagsを受け取り、DBへの重複登録を防いだ上でtagsをrecipeに追加する。
+        # RecipeSerializer内の関数内でのみ使用されることを想定しているため、慣用的に頭に_をつけている。
         auth_user = self.context['request'].user
-        # viewがserializerにuser情報を与える時にはcontext['request]を使う
+        # Testで使うself.userはTestCaseオブジェクトのuserだからここでは使えない。
+        # Serializerからユーザー情報を呼び出す場合はself.context['request]を使う。
+        # context（文脈）で考えれば、POST→Serializer→DBだから、Serのcontextの中にpost requestがあるのは理解できる。
         for tag in tags:
             tag_obj, created = Tag.objects.get_or_create(
                 # その名の通り、すでに同じtagがあればretrieveし、無ければ新規にTagインスタンスをcreateする。
@@ -52,10 +57,22 @@ class RecipeSerializer(serializers.ModelSerializer):
                 # createdはここでは使わないが、get_or_create()はこのタプルをリターンするのだろう。
                 user=auth_user,
                 **tag,
-                # name=tag['name']としてもここでは同じだが、将来的にTagに新しいフィールドができるかもしれないから**を使う。
+                # tag = {id: 1, user: "testuser", name: "egg"}　→これを展開する。
+                # 現時点ではname=tag['name']としても同じだが、将来的にTagに新しいフィールドができるかもしれないから**を使う。
             )
             recipe.tags.add(tag_obj)
-            # recipeのtagsフィールドにタグを追加している。
+            # recipeのtagsフィールドにTag（既存の又は新規追加されたもの）を追加している。
+
+    def _get_or_create_ingredients(self, ingredients, recipe):
+        """Handle getting or creating ingredients as needed."""
+        # ingreを除いたrecipeとPOSTに含まれるingreを受け取り、DBへの重複登録を防いだ上でingredientsをrecipeに追加する。
+        auth_user =self.context['request'].user
+        for ingredient in ingredients:
+            ingredient_obj, created = Ingredient.objects.get_or_create(
+                user=auth_user,
+                **ingredient,
+            )
+            recipe.ingredients.add(ingredient_obj)
 
     def create(self, validated_data):
         """Create a recipe."""
@@ -63,11 +80,13 @@ class RecipeSerializer(serializers.ModelSerializer):
         # デフォルトでは、ネストされたserializerはread-only。よってRecipeをcreateする際にTagを新規作成することができない。
         # これを変更するためにcreateメソッドを上書きする。
         tags = validated_data.pop('tags', [])
-        # 辞書に対してpopを使う場合、第一で指定したKeyが無かった場合に返す値を指定する。ここではtagsキーが無ければ[]を返す。
+        ingredients = validated_data.pop('ingredients', [])
+        # 辞書に対してpopを使う場合、指定したKeyが無かった場合に返す値を第2引数に指定する。ここではKeyが無ければ[]を返す。
         recipe = Recipe.objects.create(**validated_data)
-        # popしたからvalidated_dataからはtagsは抜いてある。重複してTagを作ることを防ぐため。
+        # popしたからvalidated_dataからはtagsとingredientsは抜いてある。DBへの重複登録を防ぐため。
         self._get_or_create_tags(tags, recipe)
-        # recipeインスタンスにtagsフィールドを追加する。新規のタグがあればDBに保存し、既存タグならretrieveして使う。
+        self._get_or_create_ingredients(ingredients, recipe)
+        # recipeにtagsとingredientsフィールドを追加する。新規のタグがあればDBに保存し、既存タグならretrieveして使う。
 
         return recipe
 

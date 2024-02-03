@@ -293,9 +293,8 @@ class PrivateRecipeAPITests(TestCase):
         self.assertEqual(recipes.count(), 1)
         recipe = recipes[0]
         self.assertEqual(recipe.tags.count(), 2)
-        # tagsをRecipeのManyToManyFieldに設定すると、recipe.tags.からTagモデルを操作できるということ？
-        # recipe.tags.count() ... Tag.objects.count()になる？
-        # recipe.tags.all() ... Tag.objects.all()になる？
+        # Indianタグが重複してDB登録された場合、この数が３になるとの説明あり。なぜそうなるのか理解できず。。
+        # get_or_createで誤ってcreateされた場合でも、recipe.tagsの数は２になるのでは？
         self.assertIn(tag_indian, recipe.tags.all())
         for tag in payload['tags']:
             exists = recipe.tags.filter(
@@ -353,16 +352,50 @@ class PrivateRecipeAPITests(TestCase):
 
     def test_create_recipe_with_new_ingredients(self):
         """Test creating recipe with new ingredients."""
+        payload = {
+            'title': 'Thai Prawn Curry',
+            'time_minutes': 30,
+            'price': Decimal('2.50'),
+            'ingredients': [{'name': 'prawm'}, {'tom yam'}],
+        }
+        res = self.client.post(RECIPES_URL, payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
 
-        recipe = create_recipe(user=self.user,
-                               ingredients=Ingredient.objects.create(
-                                   user=self.user,
-                                   name='Banana'
-                               ))
+        recipes = Recipe.objects.filter(user=self.user)
+        self.assertEqual(recipes.count(), 1)
+        recipe = recipes[0]
+        self.assertEqual(recipe.ingredients.count(), 2)
+        for ingredient in payload['ingredients']:
+            exists = recipe.ingredients.filter(
+                name=ingredient['name'],
+                user=self.user,
+            ).exists()
+            self.assertTrue(exists)
 
     def test_create_recipe_with_existing_ingredients(self):
         """Test creating recipe with existing ingredients."""
-        pass
+        tomato_ingredient = Ingredient.objects.create(user=self.user, name='Tomato')
+        payload = {
+            'title': 'Italian Pizza',
+            'time_minutes': 50,
+            'price': Decimal('5.50'),
+            'ingredients': [{'name': 'Tomato'}, {'name': 'Cheese'}],
+        }
+        res = self.client.post(RECIPES_URL, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        recipes = Recipe.objects.filter(user=self.user)
+        self.assertEqual(recipes.count(), 1)
+        recipe = recipes[0]
+        self.assertEqual(recipe.ingredients.count(), 2)
+        self.assertIn(tomato_ingredient, recipe.ingredients.all())
+
+        for ingredient in payload['ingredients']:
+            exists = recipe.ingredients.filter(
+                user=self.user,
+                name=ingredient['name'],
+            ).exists()
+            self.assertTrue(exists)
 
     def test_create_ingredients_on_update(self):
         """Test creating tag when updating a recipe."""
