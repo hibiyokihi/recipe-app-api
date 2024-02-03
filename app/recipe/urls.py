@@ -12,19 +12,21 @@ from recipe import views
 
 router = DefaultRouter()
 router.register('recipes', views.RecipeViewSet)
-# basenameと、対応するviewsetを指定する。
-# {basename}にGETがあればViewSetクラスのアクションlist()が発動する。
-# {basename}にPOSTがあればViewSetクラスのアクションcreate()が発動する。
-# {basename}/{id等}にGETがあればretrieve()、PUTがあればupdate()のアクションが発動する。
-router.register('tags', views.TagViewSet)
-# TagViewSetは機能をlistアクションに絞ってるから、/tagに対するGETのみを想定している。
+# prefixと、対応するviewsetを指定する。
+# /api/recipe/recipesにGET >> ViewSetクラスのlist()アクション／nameはrecipe-list（prefixの単数形で作成される）
+# /api/recipe/recipesにPOST >> create()アクション／nameはrecipe-list
+# /api/recipe/recipes/{id}にGET >> retrieve()アクション／nameはrecipe-detail
+# /api/recipe/recipes/{id}にPUT(PATCH) >> update()アクション／nameはrecipe-detail
+# /api/recipe/recipes/{id}にDELETE >> destroy()アクション／nameはrecipe-detail
 
+router.register('tags', views.TagViewSet)
+# /api/recipe/tags
+
+router.register('ingredients', views.IngredientViewSet)
+# /api/recipe/ingredients
 
 app_name = 'recipe'
 
 urlpatterns = [
     path('', include(router.urls))
-    # reverseによりエンドポイントを取得し、URL nameはDefaultRouterが自動対応する。
-    # URL名 {basename}-listにGETがあればlist()アクション、POSTがあればcreateアクション。
-    # URL名 {basename}-detailにGETがあればretrieve、PUTがあればupdate。詳細はDocs参照。
 ]

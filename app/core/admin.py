@@ -42,3 +42,4 @@ admin.site.register(models.User, UserAdmin)
 admin.site.register(models.Recipe)
 # カスタマイズする必要がない場合は、通常通りこの形。
 admin.site.register(models.Tag)
+admin.site.register(models.Ingredient)

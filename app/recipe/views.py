@@ -16,6 +16,7 @@ from rest_framework.permissions import IsAuthenticated
 from core.models import (
     Recipe,
     Tag,
+    Ingredient
 )
 from recipe import serializers
 
@@ -30,7 +31,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     # このViewset（API）で使用するオブジェクトを規定する。このケースでは全てのオブジェクト。
     authentication_classes = [TokenAuthentication]
-    # Tokenによる認証を通ったら、authenticatedとされる。認証エラーならエラーを返す。
+    # TokenによるauthenticationがFalseならエラーを返す。
     permission_classes = [IsAuthenticated]
     # authenticateされていたら、このエンドポイント（API)を利用する権限を与える。未認証ならエラーを返す。
 
@@ -69,6 +70,21 @@ class TagViewSet(mixins.DestroyModelMixin,
     # Mixinを使う場合には、GenericViewSetの前に全てのMixinを記載すること。
     serializer_class = serializers.TagSerializer
     queryset = Tag.objects.all()
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Filter queryset to authenticated user."""
+        return self.queryset.filter(user=self.request.user).order_by('-name')
+
+
+class IngredientViewSet(mixins.ListModelMixin,
+                        mixins.UpdateModelMixin,
+                        mixins.DestroyModelMixin,
+                        viewsets.GenericViewSet):
+    """Manage ingredients in the database."""
+    serializer_class = serializers.IngredientSerializer
+    queryset = Ingredient.objects.all()
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 

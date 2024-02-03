@@ -13,6 +13,7 @@ from rest_framework.test import APIClient
 from core.models import (
     Recipe,
     Tag,
+    Ingredient,
 )
 
 from recipe.serializers import (
@@ -81,6 +82,8 @@ class PrivateRecipeAPITests(TestCase):
         )
 
         self.client.force_authenticate(user=self.user)
+        # self.clientは、self.userのユーザー情報で認証されている状態。
+        # よって、self.client.get等のリクエストは、認証ユーザーself.userによるリクエストとなる。
 
     def test_retrieve_recipes(self):
         """Test retrieving a list of recipes."""
@@ -347,3 +350,28 @@ class PrivateRecipeAPITests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(recipe.tags.count(), 0)
         # recipe.tagsはManyToManyだから新しいクエリが発生。よってrecipeのrefreshは不要。
+
+    def test_create_recipe_with_new_ingredients(self):
+        """Test creating recipe with new ingredients."""
+
+        recipe = create_recipe(user=self.user,
+                               ingredients=Ingredient.objects.create(
+                                   user=self.user,
+                                   name='Banana'
+                               ))
+
+    def test_create_recipe_with_existing_ingredients(self):
+        """Test creating recipe with existing ingredients."""
+        pass
+
+    def test_create_ingredients_on_update(self):
+        """Test creating tag when updating a recipe."""
+        pass
+
+    def test_update_recipe_assign_ingredients(self):
+        """Test assigning an existing tag when updating a recipe."""
+        pass
+
+    def test_clear_recipe_ingredients(self):
+        """Test clearing a recipes ingredients."""
+        pass
